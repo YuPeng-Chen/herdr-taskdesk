@@ -3,6 +3,8 @@
 A [Herdr](https://herdr.dev) layout for working with coding agents: your terminals in the middle,
 and everything you want to glance at around them.
 
+<img src="preview.png" alt="taskdesk in Herdr (terminal and lists blurred)" width="720">
+
 ```
 +-----------+---------------------------+-------------+
 | Spaces    |  tabs                     | Task card   |
@@ -29,6 +31,14 @@ and everything you want to glance at around them.
 All of them follow the **live** folder of the focused terminal, including terminals on remote machines.
 
 ## Install
+
+Ask the agent running in Herdr:
+
+```text
+Read ~/.config/herdr-app/AGENTS.md, then add this layout: https://github.com/YuPeng-Chen/herdr-taskdesk
+```
+
+The agent follows [RECIPE.md](RECIPE.md). To do it by hand:
 
 1. Copy `mods/*` into `~/.config/herdr-app/mods/` and `layouts/taskdesk.json` into `~/.config/herdr-app/layouts/`.
 2. Switch to it: `herdr-app do layout.switch --name taskdesk` (or cycle with `ctrl-shift-l`).
