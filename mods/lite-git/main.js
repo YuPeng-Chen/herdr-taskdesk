@@ -29,8 +29,10 @@ function location() {
   const space = spaces().find((s) => s.active), f = focused();
   const pane = f?.pane ? panes().find((p) => p.pane === f.pane) : null;
   const on = f?.pane === null ? (f.terminal?.includes("/") ? f.terminal.split("/")[0] : null) : space?.machine ?? null;
-  // terminals() has the folder the program is in now; a pane's cwd can still be where it started.
-  const live = f?.terminal ? terminals().find((x) => x.address === f.terminal)?.cwd : null;
+  // The folder the running program is in now (an agent can start somewhere other than its shell's
+  // folder), else the shell's own; a pane's cwd can still be where it started.
+  const term = f?.terminal ? terminals().find((x) => x.address === f.terminal) : null;
+  const live = term?.foreground?.cwd || term?.cwd;
   return { cwd: live || pane?.cwd || f?.cwd || space?.folder, on };
 }
 const keyOf = () => JSON.stringify(location());
