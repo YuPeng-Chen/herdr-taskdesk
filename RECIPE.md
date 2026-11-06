@@ -13,7 +13,8 @@ those panels. This file is the recipe an agent follows to add it.
 - **Work column**: the tab bar (`tabs`), then a row with the shown tab as cards (a `pane` header on every
   pane), Herdr's hidden Files/Changes panel, and the **right column** (360px, 240 to 700px when dragged):
   - **Task card** (`lite-card`): the card of the focused terminal's folder, with Lint and Handover buttons.
-  - **Git** (`lite-git`): the Git graph. Click a commit to show its files in Changes.
+  - **Git** (`lite-git`): the Git graph. Click any commit, the latest too, to show its files and diff in Changes.
+    The **Uncommitted** button in its header (with the number of changed files) shows the uncommitted files instead.
   - **Changes** (`lite-changes`): a folder tree of the uncommitted files, or of the selected commit. **Pop out**
     opens the diff in a window (`lite-diff`) that follows the file you click.
 - **Statusline** (`lite-status`) under the tab: machine, branch, ahead/behind, changed files, agent count,
@@ -63,5 +64,6 @@ those panels. This file is the recipe an agent follows to add it.
 - `herdr-app check` passes for all six mods and `herdr-app status` shows no errors; there is no
   `layouts/taskdesk.error`.
 - The right column shows Task card, Git and Changes, and the statusline buttons hide and show them.
-- Selecting a commit in Git lists its files in Changes; selecting the latest commit (HEAD) shows the uncommitted files again.
+- Selecting a commit in Git, the latest one included, lists that commit's files in Changes; the **Uncommitted** button
+  shows the uncommitted files again, and it is lit while they show.
 - `ctrl-shift-l` cycles back to the person's own layout.

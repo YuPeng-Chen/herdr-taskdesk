@@ -23,8 +23,8 @@ and everything you want to glance at around them.
 |---|---|
 | `lite-card` | **Task card** panel for the focused terminal, with **Lint** and **Handover** buttons. |
 | `lite-agents` | Agents list that also shows each agent's card line (`Next`, stale age, `lines/limit`). |
-| `lite-git` | Git graph. Hover for the full message, author and date. Click a commit to show its files in Changes, right-click to copy its hash. |
-| `lite-changes` | Changes as a scrollable folder tree. Shows uncommitted files, or the files of the commit selected in Git. |
+| `lite-git` | Git graph. Hover for the full message, author and date. Click a commit (the latest one too) to show its files in Changes, right-click to copy its hash. The **Uncommitted** button shows the uncommitted files again. |
+| `lite-changes` | Changes as a scrollable folder tree. Shows the uncommitted files, or the files of the commit selected in Git, each with its diff. |
 | `lite-diff` | Diff window for one file. **Pop out** from Changes; it follows the file you click afterwards. Size steps S / M / L / XL. |
 | `lite-status` | Statusline: machine, branch, ahead/behind, changed files, agent count, and buttons to toggle the right-hand panels. |
 
@@ -64,7 +64,7 @@ Every command can be run with `herdr-app do <command>` or bound to a key in `key
 | Command | Effect |
 |---|---|
 | `lite-status.card` / `.git` / `.changes` | Toggle that right-hand panel (the column goes with the last one). |
-| `lite-git.next` / `.prev` | Select the older / newer commit. |
+| `lite-git.next` / `.prev` | Select the older / newer commit; newer than the latest commit is the uncommitted changes. |
 | `lite-changes.popout` | Open the diff window for the selected file. |
 | `lite-changes.next` / `.prev` | Select the next / previous file in tree order (the diff window follows). |
 | `lite-diff.next` / `.prev` / `.smaller` / `.larger` / `.close` | Control the diff window. |

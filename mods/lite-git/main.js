@@ -19,7 +19,7 @@ const COPIED_MS = 1200;
 const CARD_W = 340;
 const BODY_MAX = 1200;
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false"];
-// The commit shown in lite-changes, as { context, hash }; none = the latest, i.e. the uncommitted changes.
+// The commit shown in lite-changes, as { context, hash }; none = the uncommitted changes.
 // lite-changes reads the same key: keep the two in step.
 const SELECT_KEY = "lite.commit";
 const GLYPH = { "*": "●", "|": "│", "/": "╱", "\\": "╲", "_": "─", "-": "─" };
@@ -75,6 +75,7 @@ export default class LiteGit extends View {
     this.rows = [];
     this.details = {};
     this.hashes = "";
+    this.dirty = 0;
     this.copied = null;
     this.cells = 1;
     this.repo = "";
@@ -94,29 +95,28 @@ export default class LiteGit extends View {
     });
   }
 
-  // The hash lite-changes is showing, or null for the latest commit (its changes are the uncommitted ones).
+  // The hash lite-changes is showing, or null while it shows the uncommitted changes.
   pickedHash() {
     const s = shared(SELECT_KEY);
     return s?.hash && s.context === keyOf() ? s.hash : null;
   }
 
-  isHead(r) { return r.refs.some((name) => name.startsWith("HEAD")); }
-
   isSelected(r, picked) {
-    return picked ? picked === (this.details[r.hash]?.full ?? r.hash) : this.isHead(r);
+    return Boolean(picked) && (picked === r.hash || picked === this.details[r.hash]?.full);
   }
 
-  // Picking the latest commit, or nothing, goes back to the uncommitted changes.
+  // A commit shows its own files, the latest one included; no commit shows the uncommitted changes.
   choose(r) {
-    const hash = r ? this.details[r.hash]?.full ?? r.hash : null;
-    setShared(SELECT_KEY, !r || this.isHead(r) ? null : { context: keyOf(), hash });
+    setShared(SELECT_KEY, r ? { context: keyOf(), hash: this.details[r.hash]?.full ?? r.hash } : null);
   }
 
+  // The uncommitted changes sit before the newest commit: stepping newer from it stays, older goes to it.
   step(by) {
     const commits = this.rows.filter((r) => r.hash), picked = this.pickedHash();
-    const now = Math.max(0, commits.findIndex((r) => this.isSelected(r, picked)));
-    const next = commits[Math.max(0, Math.min(commits.length - 1, now + by))];
-    if (next) this.choose(next);
+    const now = commits.findIndex((r) => this.isSelected(r, picked));
+    const next = now + by;
+    if (next < 0) this.choose(null);
+    else if (commits.length) this.choose(commits[Math.min(commits.length - 1, next)]);
   }
 
   refresh(cx) {
@@ -128,6 +128,7 @@ export default class LiteGit extends View {
       this.rows = [];
       this.details = {};
       this.hashes = "";
+      this.dirty = 0;
       this.repo = "";
       this.error = null;
     }
@@ -140,15 +141,18 @@ export default class LiteGit extends View {
         if (top.code !== 0) next = { error: "Not a git repository", rows: [], repo: "" };
         else {
           const root = top.stdout.trim();
+          // Read like the statusline does (untracked folders count once), so the count is cheap on a big repo.
+          const status = await exec("git", [...READ, "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=normal"], { cwd: root, on });
+          const dirty = status.code === 0 ? status.stdout.split("\0").filter(Boolean).length : 0;
           const log = await exec("git", [...READ, "log", "--graph", "--all", "--date-order", "--color=never", `-n${COMMITS}`, `--format=${FORMAT}`], { cwd: root, on });
           const repo = root.split(/[\\/]/).pop();
-          if (log.code !== 0) next = { error: "No commits yet", rows: [], repo, details: {}, hashes: "" };
+          if (log.code !== 0) next = { error: "No commits yet", rows: [], repo, details: {}, hashes: "", dirty };
           else {
             const rows = parse(log.stdout);
             const hashes = rows.filter((r) => r.hash).map((r) => r.hash).join(",");
             // The messages only change when the commits do, so they are read again only then.
             const details = hashes === this.hashes ? this.details : await loadDetails(root, on);
-            next = { error: null, rows, repo, details, hashes };
+            next = { error: null, rows, repo, details, hashes, dirty };
           }
         }
       } catch (e) {
@@ -190,7 +194,7 @@ export default class LiteGit extends View {
     const copied = this.copied === r.hash;
     const selected = this.isSelected(r, picked);
     line.cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover))
-      .on_click(() => this.choose(selected ? null : r))
+      .on_click(() => this.choose(r))
       .on_mouse_down("right", (_e, cx) => this.copy(r, cx))
       .children(this.chips(r.refs, t))
       .child(div().flex_1().min_w(0).truncate().child(r.subject))
@@ -235,6 +239,16 @@ export default class LiteGit extends View {
       .child(div().text_size(10.5).text_color(t.dim).child("Click: show its files in Changes · Right-click: copy the hash"));
   }
 
+  // The way to the uncommitted changes; lit while Changes shows them.
+  uncommitted(t, picked) {
+    const on = !picked;
+    return h_flex().id("git-uncommitted").flex_none().h(20).px(8).gap(5).items_center().rounded(5).border_1()
+      .border_color(on ? t.accent + "88" : t.border).text_size(11).text_color(on ? t.accent : t.muted).cursor_pointer()
+      .hover((s) => s.bg(t.hover)).on_click(() => this.choose(null))
+      .child("Uncommitted")
+      .when(this.dirty > 0, (e) => e.child(div().text_color(t.blocked).child(String(this.dirty))));
+  }
+
   render(cx) {
     if (keyOf() !== this.context) this.refresh(cx);
     const t = theme();
@@ -251,6 +265,7 @@ export default class LiteGit extends View {
         .child(h_flex().h(34).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border)
           .child(div().font_semibold().child("Git"))
           .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.dim).child(this.repo))
+          .child(this.uncommitted(t, picked))
           .when(commits > 0, (e) => e.child(div().flex_none().text_size(10.5).text_color(t.muted).child(`${commits} commits`))))
         .child(v_flex().id("lite-git-list").flex_1().min_h(0).overflow_y_scrollbar().py(4)
           .children(this.rows.map((r, i) => this.row(r, i, t, picked)))

@@ -119,7 +119,7 @@ export default class Changes extends View {
       this.message = this.input.value();
       if (hadMessage !== Boolean(this.message.trim())) cx.notify();
     });
-    this.input.on("submit", (_e, cx) => this.commit(cx));
+    this.input.on("submit", (_e, cx) => this.doCommit(cx));
     this.input.on("focus", (_e, cx) => { this.typing = true; cx.notify(); });
     this.input.on("blur", (_e, cx) => { this.typing = false; cx.notify(); });
     this.refresh(cx);
@@ -207,15 +207,13 @@ export default class Changes extends View {
   }
 
   // The files a commit changed, against its first parent (a first commit: against nothing).
-  // null for no pick, and for the latest commit: its changes are the ones not committed yet.
+  // null for no pick: the uncommitted changes show.
   async commitFiles(git, wanted) {
     if (!wanted) return null;
     if (!/^[0-9a-f]{4,64}$/i.test(wanted)) throw new Error("Not a commit hash");
     const rev = await git(["rev-parse", "--verify", `${wanted}^{commit}`]);
     if (rev.code !== 0) throw new Error(`Commit ${wanted.slice(0, 7)} not found`);
     const hash = rev.stdout.trim();
-    const head = await git(["rev-parse", "--verify", "HEAD"]);
-    if (head.code === 0 && head.stdout.trim() === hash) return null;
     const parent = await git(["rev-parse", "--verify", `${hash}^1`]);
     const base = parent.code === 0 ? parent.stdout.trim() : EMPTY_TREE;
     const names = await git(["diff", "--name-status", "-z", "--no-renames", base, hash]);
@@ -283,7 +281,7 @@ export default class Changes extends View {
     cx.notify();
   }
 
-  commit(cx) {
+  doCommit(cx) {
     if (!this.message.trim() || !this.root || this.busy || this.loading || this.context !== key()) return;
     const root = this.root, on = this.on, context = this.context, message = this.message.trim();
     this.busy = true; this.note = null;
@@ -434,6 +432,6 @@ export default class Changes extends View {
       .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)))
       .when(!this.commit, (e) => e.child(h_flex().flex_none().p(10).gap(8).border_t(1).border_color(t.border)
         .child(div().id("commit-message").flex_1().min_w(0).h(32).px(10).flex().items_center().rounded(8).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Input.new(this.input).h_full().text_size(12).text_color(t.foreground)))
-        .child(div().id("commit").h(32).px(14).flex().items_center().rounded(8).bg(enabled ? t.solid : t.raised).text_color(enabled ? t.solid_foreground : t.dim).text_size(12).when(enabled, (e) => e.cursor_pointer()).on_click((_e, cx) => this.commit(cx)).child(this.busy ? "Committing…" : "Commit"))));
+        .child(div().id("commit").h(32).px(14).flex().items_center().rounded(8).bg(enabled ? t.solid : t.raised).text_color(enabled ? t.solid_foreground : t.dim).text_size(12).when(enabled, (e) => e.cursor_pointer()).on_click((_e, cx) => this.doCommit(cx)).child(this.busy ? "Committing…" : "Commit"))));
   }
 }
