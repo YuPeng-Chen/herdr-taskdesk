@@ -1,0 +1,5 @@
+# Written by Herdr next to every mod, not part of the source.
+gpui-kit.d.ts
+jsconfig.json
+*.error
+*.bak
